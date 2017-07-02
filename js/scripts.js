@@ -1,14 +1,13 @@
 'use strict';
 
 jQuery(function ($, undefined) {
-
     const defaultFormData = {
-        "sum": 100,
-        "term": 5,
-        "ic": 3718194590,
-        "surname": "Petrov",
-        "name": "Ivan",
-        "city": "Kyiv"
+        'sum': 1000,
+        'term': 5,
+        'ic': '3500094590',
+        'surname': 'Petrov',
+        'name': 'Ivan',
+        'city': 'Kyiv'
     };
     const routes = {
         '/step1': ['templates/step1'],
@@ -16,6 +15,15 @@ jQuery(function ($, undefined) {
         '/step3': ['templates/step3'],
         //'/step4': ['templates/step1', 'templates/step2'],
         // '/step5': ['templates/step1', 'templates/step2', 'templates/step3'],
+    };
+    const errorMessages = {
+        'sum': 'The range is from 1 to 10000.',
+        'term': 'The range is from 1 to 10000.',
+        'ic1': 'Not valid identification code.',
+        'ic2': 'Your age not 21.',
+        'surname': 'Its required field.',
+        'name': 'Its required field.',
+        'city': 'Its required field.'
     };
     var currentPath = window.location.pathname;
 
@@ -84,6 +92,48 @@ jQuery(function ($, undefined) {
         }
 
         $('.progress-bar').html(progressBarHtml);
+
+        $(".progress-bar-step").on('click', function (e) {
+            e.preventDefault();
+
+            var thisBtn = $(this);
+
+            if ($(this).attr('href') > currentPath) {
+                var nextStepAbility = true;
+                var inputsList = $('#test-form input[id]');
+                inputsList.each(function (inputNumber) {
+                    $(inputsList[inputNumber]).trigger("blur");
+                });
+
+                setTimeout(function () {
+                    inputsList.each(function (inputNumber) {
+                        if ($(inputsList[inputNumber]).data('valid') == false) {
+                            nextStepAbility = false;
+                        }
+                    });
+
+                    if (nextStepAbility) {
+                        var currentData = getSessionStorageData();
+                        var dataKey;
+                        currentData = JSON.parse(currentData);
+
+                        inputsList.each(function (inputNumber) {
+                            dataKey = $(inputsList[inputNumber]).attr('id');
+                            currentData[dataKey] = $(inputsList[inputNumber]).val();
+                        });
+
+                        setSessionStorageData(JSON.stringify(currentData));
+                        window.location.href = $(thisBtn).attr('href');
+                    }
+                }, 500);
+            }
+            else {
+                window.location.href = $(this).attr('href');
+            }
+
+
+            return false;
+        });
     }
 
     function createNavButtons() {
@@ -103,6 +153,40 @@ jQuery(function ($, undefined) {
         }
 
         $(".switch-buttons").html(progressNavHtml);
+
+        $(".next").on('click', function (e) {
+
+            e.preventDefault();
+            var nextStepAbility = true;
+            var inputsList = $('#test-form input[id]');
+            inputsList.each(function (inputNumber) {
+                $(inputsList[inputNumber]).trigger("blur");
+            });
+
+            setTimeout(function () {
+                inputsList.each(function (inputNumber) {
+                    if ($(inputsList[inputNumber]).data('valid') == false) {
+                        nextStepAbility = false;
+                    }
+                });
+
+                if (nextStepAbility) {
+                    var currentData = getSessionStorageData();
+                    var dataKey;
+                    currentData = JSON.parse(currentData);
+
+                    inputsList.each(function (inputNumber) {
+                        dataKey = $(inputsList[inputNumber]).attr('id');
+                        currentData[dataKey] = $(inputsList[inputNumber]).val();
+                    });
+
+                    setSessionStorageData(JSON.stringify(currentData));
+                    window.location.href = $('.next').attr('href');
+                }
+            }, 500);
+
+            return false;
+        });
     }
 
 
@@ -137,97 +221,81 @@ jQuery(function ($, undefined) {
         $('#test-form input[id]').on('blur', function (event) {
             inputValidation(event.target.id);
         });
+
+        function inputValidation(id) {
+            var input = $('#' + id);
+            var inputValue = input.val();
+
+            function insertSuccessMark() {
+                if (input.parent().find('.error').length) {
+                    input.parent().find('.error').remove();
+                    $(input).before('<span class="success-mark">&#10004;</span>');
+                }
+                else if (!input.parent().find('.success-mark').length) {
+                    $(input).before('<span class="success-mark">&#10004;</span>');
+                }
+
+                input.data('valid', true);
+            }
+
+            function insertErrorMessage(errorText) {
+                if (input.parent().find('.success-mark').length) {
+                    input.parent().find('.success-mark').remove();
+                    $(input).before('<span class="error error-mark">&#10008;</span>');
+                    input.parent().find('input').before('<p class="error error-text">' + errorText + '</p>');
+                }
+                else if (!input.parent().find('.error-mark').length) {
+                    $(input).before('<span class="error error-mark">&#10008;</span>');
+                    input.parent().find('input').before('<p class="error error-text">' + errorText + '</p>');
+                }
+
+                input.data('valid', false);
+            }
+
+            $.post("/php/validation.php", {'id': id, 'value': inputValue}, function (data) {
+                if (data == 1) {
+                    insertSuccessMark();
+                }
+                else {
+                    data = JSON.parse(data);
+                    insertErrorMessage(errorMessages[data.errorMsgId]);
+                }
+            });
+
+        }
     }
 
-    function inputValidation(id) {
-        var input = $('#' + id);
-        var inputValue = input.val();
-
-        function insertSuccessMark() {
-            if (input.parent().find('.error').length) {
-                input.parent().find('.error').remove();
-                $(input).before('<span class="success-mark">&#10004;</span>');
-            }
-            else if (!input.parent().find('.success-mark').length) {
-                $(input).before('<span class="success-mark">&#10004;</span>');
-            }
+    /* View result data and submitting it */
+    function viewResult() {
+        var resultData = JSON.parse(getSessionStorageData());
+        var resultHtml = '';
+        for (var inputName in resultData) {
+            resultHtml += '<tr><td>' + inputName + '</td><td>' + resultData[inputName] + '</td></tr>';
         }
+        $('.table-data').html(resultHtml);
+        $('.submit').on('click', function () {
+            event.preventDefault();
 
-        function insertErrorMessage(errorText) {
-            if (input.parent().find('.success-mark').length) {
-                input.parent().find('.success-mark').remove();
-                $(input).before('<span class="error error-mark">&#10008;</span>');
-                input.parent().find('input').before('<p class="error error-text">' + errorText + '</p>');
-            }
-            else if (!input.parent().find('.error-mark').length) {
-                $(input).before('<span class="error error-mark">&#10008;</span>');
-                input.parent().find('input').before('<p class="error error-text">' + errorText + '</p>');
-            }
-        }
+            $.post("/php/submit.php", getSessionStorageData(), function (data) {
+                if (data) {
+                    alert('Data submitted ;)');
+                    sessionStorage.clear();
+                    window.location.href = '/step1';
+                }
+            });
 
-        switch (id) {
-            case 'sum':
-                numberBetween(1, 10000);
-                break;
-            case 'term':
-                numberBetween(1, 12);
-                break;
-            case 'ic':
-                ic();
-                break;
-            case 'surname':
-                surname();
-                break;
-            case 'name':
-                name();
-                break;
-            case 'city':
-                city();
-                break;
-        }
-
-        function numberBetween(min, max) {
-            inputValue = parseInt(inputValue, 10);
-
-            if (!isNaN(inputValue) && min <= inputValue && inputValue <= max) {
-                insertSuccessMark();
-            }
-            else {
-                insertErrorMessage('The range is from 1 to 10000.');
-            }
-        }
-
-        function term() {
-            console.log('term');
-
-        }
-
-        function ic() {
-            console.log('ic');
-
-        }
-
-        function surname() {
-            console.log('surname');
-
-        }
-
-        function name() {
-            console.log('name');
-
-        }
-
-        function city() {
-            console.log('city');
-
-        }
-
-
+            return false;
+        });
     }
 
     function handleTemplate() {
-        autoFill();
-        addBlurEvent();
+        if (currentPath != Object.keys(routes)[Object.keys(routes).length - 1]) {
+            autoFill();
+            addBlurEvent();
+        }
+        else {
+            viewResult();
+        }
     }
 
 

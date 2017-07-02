@@ -35,7 +35,7 @@ button {
 
 .submit,
 .progress-bar {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .progress-bar {
@@ -79,4 +79,17 @@ button {
     color: #f44336;
 }
 
+/* Ajax List Cities */
+.ui-menu .ui-menu-item a,
+.ui-menu .ui-menu-item a.ui-state-hover,
+.ui-menu .ui-menu-item a.ui-state-active {
+    font-weight: normal;
+    margin: -1px;
+    text-align: left;
+    font-size: 14px;
+}
 
+.ui-autocomplete-loading {
+    background: white url("/images/ui-anim_basic_16x16.gif") right center no-repeat;
+}
+/* Ajax List Cities END */
